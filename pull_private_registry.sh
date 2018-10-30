@@ -4,16 +4,14 @@ MIRROR_ROOT=$(dirname "${BASH_SOURCE}")
 
 source "${MIRROR_ROOT}/util/validate_filepath.sh"
 source "${MIRROR_ROOT}/util/save_not_pull_images.sh"
-source "${MIRROR_ROOT}/util/save_not_push_images.sh"
 source "${MIRROR_ROOT}/util/get_image_info.sh"
 
 #循环标记
 cnt=1
-#标记已下载的镜像数量
+#标记已pull的镜像数量
 msg=1
-#统计pull和push成功数量
+#统计pull成功数量
 pullCnt=0
-pushCnt=0
 #远程仓库
 fromRepo=""
 #镜像名称
@@ -21,12 +19,12 @@ imagesName=""
 #推送仓库
 toRepo=""
 
-#pull&tag&push镜像
+#pull&tag镜像
 pullImages(){
     #读取文件信息
     for imagesInfo in $(cat $1)
     do
-        #文件信息两个一组，第一个远程仓库及镜像名，第二个私有仓库
+        #文件信息两个一组，第一个需要修改成的tag，第二个来源仓库
         val=`expr $cnt % 2`
         if [ $val -eq 1 ]; then
            #获取镜像信息（远程仓库、镜像名称）
@@ -34,27 +32,19 @@ pullImages(){
         else
             #获取推送仓库
             toRepo=$imagesInfo
-            #pull原镜像
-            echo "Msg : No.${msg} : ${imagesName} pull begin      ***"
-            sudo docker pull $fromRepo$imagesName
+            #pull私有仓库镜像
+            echo "Msg : No.${msg} : ${imagesName} pull begin       ***"
+            sudo docker pull $toRepo/$imagesName
             saveNotPull $? $msg $fromRepo $imagesName $toRepo
             if [ "$?" -eq 0 ]; then
                 pullCnt=`expr $pullCnt + 1`
-                #更新标签
+                #更新标签tag
                 echo "Msg : No.${msg} : ${imagesName} rename           ***"
-                sudo docker tag $fromRepo$imagesName $toRepo/$imagesName
-                #推送服务器
-                echo "Msg : No.${msg} : ${imagesName} push begin       ***"
-                sudo docker push $toRepo/$imagesName
-                saveNotPush $? $msg $fromRepo $imagesName $toRepo
-                if [ "$?" -eq 0 ]; then
-                    pushCnt=`expr $pushCnt + 1`
-                    #删除新标签镜像
-                    echo "Msg : No.${msg} : ${imagesName} remove begin     ***"
-                    sudo docker rmi $fromRepo$imagesName
-                    sudo docker rmi $toRepo/$imagesName
-                    echo "Msg : No.${msg} : ${imagesName} remove end       ***"
-                fi
+                sudo docker tag $toRepo/$imagesName $fromRepo$imagesName
+                #删除旧标签镜像
+                echo "Msg : No.${msg} : ${imagesName}.old remove begin ***"
+                sudo docker rmi $toRepo/$imagesName
+                echo "Msg : No.${msg} : ${imagesName}.old remove end   ***"
             fi
             msg=`expr $msg + 1`
         fi
@@ -81,11 +71,6 @@ if [ "$?" -eq 0 ]; then
     else
         echo "Msg : Some images Not pull complete,Check the log file ${MIRROR_ROOT}/not_pull_images.txt for details."
         cat ${MIRROR_ROOT}/not_pull_images.txt
-    fi
-    val=`expr $pullCnt - $pushCnt`
-    if [ ! $val -eq 0 ]; then
-        echo "Msg : Some images Not push complete,Check the log file ${MIRROR_ROOT}/not_push_images.txt for details."
-        cat ${MIRROR_ROOT}/not_push_images.txt
     fi
 else
     #校验失败，退出脚本

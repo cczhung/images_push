@@ -1,0 +1,2 @@
+jenkins:2.32.1 registry.saas.hand-china.com/tools
+gcr.io/google-containers/kube-addon-manager:v6.5 registry.saas.hand-china.com/google_containers

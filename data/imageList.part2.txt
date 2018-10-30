@@ -1,0 +1,2 @@
+docker.io/weaveworks/weave-npc:1.8.2 registry.saas.hand-china.com/weaveworks
+docker.io/weaveworks/weave-kube:1.8.2 registry.saas.hand-china.com/weaveworks
